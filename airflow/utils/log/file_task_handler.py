@@ -18,18 +18,25 @@
 """File logging handler for tasks."""
 import logging
 import os
+from datetime import timedelta
 from pathlib import Path
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
 import httpx
 from itsdangerous import TimedJSONWebSignatureSerializer
 
 from airflow.configuration import AirflowConfigException, conf
-from airflow.models import TaskInstance
+from airflow.utils import timezone
 from airflow.utils.context import Context
 from airflow.utils.helpers import parse_template_string, render_template_to_string
 from airflow.utils.log.non_caching_file_handler import NonCachingFileHandler
 from airflow.utils.session import create_session
+
+if TYPE_CHECKING:
+    from airflow.models import TaskInstance
+
+
+LOG_SEARCH_INTERVAL = timedelta(days=2)
 
 
 class FileTaskHandler(logging.Handler):
@@ -158,11 +165,10 @@ class FileTaskHandler(logging.Handler):
             except Exception as f:
                 log += f'*** Unable to fetch logs from worker pod {ti.hostname} ***\n{str(f)}\n\n'
         else:
-            timeout = None  # No timeout
             try:
-                timeout = conf.getint('webserver', 'log_fetch_timeout_sec')
+                timeout: Optional[int] = conf.getint('webserver', 'log_fetch_timeout_sec')
             except (AirflowConfigException, ValueError):
-                pass
+                timeout = None  # No timeout
 
             signer = TimedJSONWebSignatureSerializer(
                 secret_key=conf.get('webserver', 'secret_key'),
@@ -176,8 +182,18 @@ class FileTaskHandler(logging.Handler):
                 ti=ti, worker_log_server_port=conf.get('logging', 'WORKER_LOG_SERVER_PORT')
             )
 
+            # Inner import to avoid circular import
+            from airflow.models import TaskInstance
+
             with create_session() as session:
-                hosts = session.query(TaskInstance.hostname).filter(TaskInstance.hostname != '').distinct()
+                hosts = (
+                    session.query(TaskInstance.hostname)
+                    .filter(
+                        TaskInstance.hostname != '',
+                        TaskInstance.end_date > (timezone.utcnow() - LOG_SEARCH_INTERVAL),
+                    )
+                    .distinct()
+                )
 
             for host in hosts:
                 url = os.path.join("http://{host}:{worker_log_server_port}/log", log_relative_path).format(
