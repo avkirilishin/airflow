@@ -191,7 +191,7 @@ alibaba = [
     'oss2>=2.14.0',
 ]
 amazon = [
-    'boto3>=1.15.0,<1.19.0',
+    'boto3>=1.15.0,<2.0.0',
     'watchtower~=2.0.1',
     'jsonpath_ng>=1.5.3',
     'redshift_connector~=2.0.888',
@@ -307,6 +307,7 @@ google = [
     # https://github.com/googleapis/google-cloud-python/issues/10566
     'google-auth>=1.0.0,<3.0.0',
     'google-auth-httplib2>=0.0.1',
+    'google-cloud-aiplatform>=1.7.1,<2.0.0',
     'google-cloud-automl>=2.1.0,<3.0.0',
     'google-cloud-bigquery-datatransfer>=3.0.0,<4.0.0',
     'google-cloud-bigtable>=1.0.0,<2.0.0',
@@ -343,6 +344,7 @@ google = [
     # _check_google_client_version (airflow/providers/google/cloud/hooks/bigquery.py:49)
     'pandas-gbq<0.15.0',
     pandas_requirement,
+    'sqlalchemy-bigquery>=1.2.1',
 ]
 grpc = [
     'google-auth>=1.0.0, <3.0.0',
@@ -525,7 +527,7 @@ yandex = [
     'yandexcloud>=0.122.0',
 ]
 zendesk = [
-    'zdesk',
+    'zenpy>=2.0.24',
 ]
 # End dependencies group
 
