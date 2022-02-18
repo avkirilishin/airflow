@@ -35,7 +35,6 @@ from typing import (
     Tuple,
     TypeVar,
 )
-from urllib import parse
 
 from airflow.configuration import conf
 from airflow.exceptions import AirflowException
@@ -62,7 +61,7 @@ def validate_key(k: str, max_length: int = 250):
         raise AirflowException(f"The key has to be less than {max_length} characters")
     if not KEY_REGEX.match(k):
         raise AirflowException(
-            f"The key ({k}) has to be made of alphanumeric characters, dashes, "
+            f"The key {k!r} has to be made of alphanumeric characters, dashes, "
             f"dots and underscores exclusively"
         )
 
@@ -75,7 +74,7 @@ def validate_group_key(k: str, max_length: int = 200):
         raise AirflowException(f"The key has to be less than {max_length} characters")
     if not GROUP_KEY_REGEX.match(k):
         raise AirflowException(
-            f"The key ({k!r}) has to be made of alphanumeric characters, dashes and underscores exclusively"
+            f"The key {k!r} has to be made of alphanumeric characters, dashes and underscores exclusively"
         )
 
 
@@ -258,8 +257,7 @@ def build_airflow_url_with_query(query: Dict[str, Any]) -> str:
     import flask
 
     view = conf.get('webserver', 'dag_default_view').lower()
-    url = flask.url_for(f"Airflow.{view}")
-    return f"{url}?{parse.urlencode(query)}"
+    return flask.url_for(f"Airflow.{view}", **query)
 
 
 # The 'template' argument is typed as Any because the jinja2.Template is too
