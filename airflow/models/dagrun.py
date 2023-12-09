@@ -272,42 +272,36 @@ class DagRun(Base, LoggingMixin):
         return self._state
 
     def set_state(self, state: DagRunState) -> None:
-        """
-        QUEUED => QUEUED        queued_at = timezone.utcnow()
-        QUEUED => RUNNING       start_date = timezone.utcnow(), end_date = None
-        QUEUED => SUCCESS       end_date = timezone.utcnow()
-        QUEUED => FAILED        end_date = timezone.utcnow()
+        """Change the state of the DagRan.
 
-        RUNNING => QUEUED       queued_at = timezone.utcnow(), start_date = None, end_date = None
-        RUNNING => RUNNING      start_date = timezone.utcnow()
-        RUNNING => SUCCESS      end_date = timezone.utcnow()
-        RUNNING => FAILED       end_date = timezone.utcnow()
+        Changes to attributes are implemented in accordance with the following table
+        (rows represent old states, columns represent new states):
 
-        SUCCESS => QUEUED       queued_at = timezone.utcnow(), start_date = None, end_date = None
-        SUCCESS => RUNNING      start_date = timezone.utcnow(), end_date = None
-        SUCCESS => SUCCESS
-        SUCCESS => FAILED
-
-        FAILED => QUEUED        queued_at = timezone.utcnow(), start_date = None, end_date = None
-        FAILED => RUNNING       start_date = timezone.utcnow(), end_date = None
-        FAILED => SUCCESS
-        FAILED => FAILED
-
-        for instance, can happen in tests
-        None => QUEUED        queued_at = timezone.utcnow(), start_date = None, end_date = None
-        None => RUNNING       start_date = timezone.utcnow(), end_date = None
-        None => SUCCESS       end_date = timezone.utcnow()
-        None => FAILED        end_date = timezone.utcnow()
+        |         | QUEUED                        | RUNNING                                  | SUCCESS                      | FAILED                       |
+        |---------|-------------------------------|------------------------------------------|------------------------------|------------------------------|
+        | None    | queued_at = timezone.utcnow() | if empty: start_date = timezone.utcnow() | end_date = timezone.utcnow() | end_date = timezone.utcnow() |
+        |         |                               | end_date = None                          |                              |                              |
+        | QUEUED  | queued_at = timezone.utcnow() | start_date = timezone.utcnow()           | end_date = timezone.utcnow() | end_date = timezone.utcnow() |
+        |         |                               | end_date = None                          |                              |                              |
+        | RUNNING | queued_at = timezone.utcnow() | start_date = timezone.utcnow()           | end_date = timezone.utcnow() | end_date = timezone.utcnow() |
+        |         | start_date = None             |                                          |                              |                              |
+        |         | end_date = None               |                                          |                              |                              |
+        | SUCCESS | queued_at = timezone.utcnow() | start_date = timezone.utcnow()           |                              |                              |
+        |         | start_date = None             | end_date = None                          |                              |                              |
+        |         | end_date = None               |                                          |                              |                              |
+        | FAILED  | queued_at = timezone.utcnow() | start_date = timezone.utcnow()           |                              |                              |
+        |         | start_date = None             | end_date = None                          |                              |                              |
+        |         | end_date = None               |                                          |                              |                              |
         """
         if state not in State.dag_states:
             raise ValueError(f"invalid DagRun state: {state}")
         if self._state != state:
             if state == DagRunState.QUEUED:
                 self.queued_at = timezone.utcnow()
-                self.start_date = None  # sure?
+                self.start_date = None
                 self.end_date = None
             if state == DagRunState.RUNNING:
-                self.start_date = timezone.utcnow()
+                self.start_date = self.start_date or timezone.utcnow()
                 self.end_date = None
             if self._state in State.unfinished_dr_states or self._state is None:
                 if state in State.finished_dr_states:
